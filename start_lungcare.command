@@ -41,6 +41,19 @@ echo "  ⏳  Kiểm tra và cài đặt dependencies..."
 pip install -r requirements.txt -q 2>&1 | tail -1
 echo "  ✅  Dependencies đã sẵn sàng"
 
+# --- 3.5. Kiểm tra & Build Frontend React ---
+if [ -d "frontend" ] && [ ! -d "frontend/dist" ]; then
+    echo ""
+    echo "  ⏳  Đang cài đặt và build React frontend (lần đầu)..."
+    cd frontend
+    if [ ! -d "node_modules" ]; then
+        npm install
+    fi
+    npm run build
+    cd ..
+    echo "  ✅  React frontend đã sẵn sàng"
+fi
+
 # --- 4. Kiểm tra knowledge base ---
 if [ ! -f "data/knowledge_base.json" ]; then
     echo ""

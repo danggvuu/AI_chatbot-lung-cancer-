@@ -3,9 +3,10 @@ import json
 import argparse
 import requests
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse
+from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from retrieval import LungCancerRetriever
@@ -14,9 +15,25 @@ load_dotenv()
 
 app = FastAPI(title="LungCare AI API", version="1.0.0")
 
-# Mount static files
+# CORS middleware for Vite dev server
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount legacy static files (kept for backward compat)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+# Check if React frontend build exists
+FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "frontend", "dist")
+HAS_FRONTEND_BUILD = os.path.isdir(FRONTEND_DIST)
+
+if HAS_FRONTEND_BUILD:
+    app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIST, "assets")), name="assets")
 
 # Configuration from environment variables
 OLLAMA_API_URL = os.environ.get("OLLAMA_API_URL", "http://localhost:11434").rstrip('/')
@@ -34,6 +51,7 @@ SYSTEM_PROMPT = """Bạn là trợ lý ảo hỗ trợ tra cứu thông tin về
 3. CHỈ DÙNG NGỮ CẢNH: Trả lời ngắn gọn (dưới 150 từ) dưới dạng các gạch đầu dòng súc tích dựa trên thông tin trong "NGỮ CẢNH THAM KHẢO". Không suy diễn ngoài tài liệu. Trích dẫn nguồn bằng cách thêm ký hiệu [1], [2], [3] hoặc [4] tương ứng với tài liệu số 1, 2, 3, 4 ở cuối câu chứa thông tin trích dẫn.
 4. CÂU HỎI NGOÀI CHỦ ĐỀ: Nếu người dùng hỏi các câu hỏi hoàn toàn không liên quan đến y học, sức khỏe hay ung thư phổi (ví dụ: lập trình, viết code, toán học, thời tiết, giải trí...), hãy lịch sự từ chối ngay lập tức và nêu rõ bạn chỉ hỗ trợ tra cứu thông tin về ung thư phổi.
 5. KHÔNG CHẨN ĐOÁN: Tuyệt đối không đưa ra chẩn đoán bệnh hay đề xuất phác đồ điều trị cụ thể cho bệnh nhân. Luôn khuyên người dùng đến cơ sở y tế chuyên khoa.
+6. TRUNG LẬP & KHÔNG QUẢNG CÁO: Tuyệt đối không quảng cáo, giới thiệu hay hướng người dùng đến khám chữa tại một bệnh viện cụ thể nào (như Bệnh viện Tâm Anh, Vinmec...). Luôn đưa ra khuyến nghị trung lập dưới dạng chung chung như "cơ sở y tế chuyên khoa", "khoa Ung bướu/Hô hấp" hoặc "bác sĩ chuyên khoa".
 
 [AN TOÀN Y KHOA (BẮT BUỘC)]
 - Nếu câu hỏi mô tả triệu chứng nghi ngờ ung thư phổi (ho kéo dài trên 3 tuần, ho ra máu, khó thở bất thường, đau ngực, sụt cân không rõ nguyên nhân):
@@ -50,7 +68,20 @@ SYSTEM_PROMPT = """Bạn là trợ lý ảo hỗ trợ tra cứu thông tin về
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
+    # Serve React frontend build if available
+    if HAS_FRONTEND_BUILD:
+        return FileResponse(os.path.join(FRONTEND_DIST, "index.html"))
+    # Fallback to legacy Jinja2 template
     return templates.TemplateResponse("index.html", {"request": request})
+
+if HAS_FRONTEND_BUILD:
+    @app.get("/favicon.svg")
+    async def favicon():
+        return FileResponse(os.path.join(FRONTEND_DIST, "favicon.svg"))
+
+    @app.get("/icons.svg")
+    async def icons():
+        return FileResponse(os.path.join(FRONTEND_DIST, "icons.svg"))
 
 @app.get("/api/sources")
 async def get_sources():
@@ -152,7 +183,7 @@ async def chat(request: Request):
         def event_stream():
             yield f"data: {json.dumps({'sources': sources_metadata})}\n\n"
             try:
-                with requests.post(f"{OLLAMA_API_URL}/api/chat", json=payload, stream=True, timeout=45) as r:
+                with requests.post(f"{OLLAMA_API_URL}/api/chat", json=payload, stream=True, timeout=180) as r:
                     if r.status_code != 200:
                         yield f"data: {json.dumps({'error': 'Ollama error', 'detail': r.text})}\n\n"
                         return
@@ -178,7 +209,7 @@ async def chat(request: Request):
         return StreamingResponse(event_stream(), media_type="text/event-stream", headers=headers)
         
     try:
-        response = requests.post(f"{OLLAMA_API_URL}/api/chat", json=payload, timeout=45)
+        response = requests.post(f"{OLLAMA_API_URL}/api/chat", json=payload, timeout=180)
         if response.status_code != 200:
             return JSONResponse(
                 content={"error": f"Ollama returned error status {response.status_code}", "detail": response.text}, 
