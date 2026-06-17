@@ -3,6 +3,10 @@ import json
 import requests
 from bs4 import BeautifulSoup
 import re
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
 
 def clean_text(text):
@@ -18,7 +22,7 @@ def scrape_url(url, source_name):
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
     try:
-        response = requests.get(url, headers=headers, timeout=15)
+        response = requests.get(url, headers=headers, verify=False, timeout=15)
         if response.status_code != 200:
             print(f"  ❌ Failed to fetch {url}, status code: {response.status_code}")
             return []
@@ -97,12 +101,25 @@ def scrape_url(url, source_name):
 def main():
     """Main scraper entrypoint. Scrapes URLs and injects MOH guidelines."""
     urls = [
+        # Bệnh viện K
+        {"url": "https://benhvienk.vn/huong-dan-kham-tam-soat-phat-hien-som-ung-thu-phoi-tai-benh-vien-k-nd91481.html", "source": "Bệnh viện K"},
+        {"url": "https://benhvienk.vn/nhung-dieu-can-biet-ve-ung-thu-phoi-nd93433.html", "source": "Bệnh viện K"},
+        {"url": "https://benhvienk.vn/dau-hieu-canh-bao-ung-thu-phoi-nd92516.html", "source": "Bệnh viện K"},
+        {"url": "https://benhvienk.vn/tac-dung-phu-khi-dieu-tri-hoa-chat-trong-ung-thu-phoi-nd92269.html", "source": "Bệnh viện K"},
+        {"url": "https://benhvienk.vn/ung-thu-phoi-va-nhung-dieu-can-luu-y-nd93519.html", "source": "Bệnh viện K"},
+        {"url": "https://benhvienk.vn/doi-tuong-nguy-co-cao-ung-thu-phoi-nd92572.html", "source": "Bệnh viện K"},
+        {"url": "https://benhvienk.vn/trieu-chung-cua-ung-thu-phoi-nd92277.html", "source": "Bệnh viện K"},
+        # Vinmec
+        {"url": "https://www.vinmec.com/vie/bai-viet/bai-1-hieu-ro-ve-ung-thu-phoi-vi", "source": "Vinmec"},
+        {"url": "https://www.vinmec.com/vie/bai-viet/co-nhung-loai-ung-thu-phoi-nao-vi", "source": "Vinmec"},
+        {"url": "https://www.vinmec.com/vie/bai-viet/diem-danh-8-dau-hien-nham-phat-hien-som-ung-thu-phoi-vi", "source": "Vinmec"},
+        {"url": "https://www.vinmec.com/vie/bai-viet/bi-ung-thu-phoi-ma-khong-ho-dung-bo-lo-cac-dau-hieu-khac", "source": "Vinmec"},
+        {"url": "https://www.vinmec.com/vie/bai-viet/ung-thu-phoi-va-tuoi-tac-moi-lien-he-va-nhung-dieu-can-biet", "source": "Vinmec"},
+        {"url": "https://www.vinmec.com/vie/bai-viet/ung-thu-phoi-co-chua-duoc-khong-vi/", "source": "Vinmec"},
+        # Bệnh viện Tâm Anh
         {"url": "https://tamanhhospital.vn/ung-thu-phoi/", "source": "Bệnh viện Tâm Anh"},
-        {"url": "https://www.vinmec.com/vie/bai-viet/ung-thu-phoi-nguyen-nhan-trieu-chung-chan-doan-va-dieu-tri-vi", "source": "Vinmec"},
-        {"url": "https://www.vinmec.com/vie/bai-viet/ung-thu-phoi-co-chua-duoc-khong-vi", "source": "Vinmec"},
-        {"url": "https://www.vinmec.com/vie/bai-viet/sang-loc-ung-thu-phoi-khi-nao-can-thuc-hien-vi", "source": "Vinmec"},
-        {"url": "https://benhvienk.vn/ung-thu-phoi-nguyen-nhan-trieu-chung-va-phuong-phap-dieu-tri-nd94791.html", "source": "Bệnh viện K"},
         {"url": "https://tamanhhospital.vn/dieu-tri-ung-thu-phoi/", "source": "Bệnh viện Tâm Anh"},
+        {"url": "https://tamanhhospital.vn/tam-soat-ung-thu-phoi/", "source": "Bệnh viện Tâm Anh"}
     ]
 
     all_chunks = []
@@ -153,6 +170,13 @@ def main():
             "title": "Hướng dẫn chẩn đoán và điều trị ung thư phổi của Bộ Y tế",
             "section_title": "Phân giai đoạn ung thư phổi theo hệ thống TNM",
             "content": "Hệ thống phân giai đoạn TNM (Tumor-Node-Metastasis) là tiêu chuẩn quốc tế để đánh giá mức độ lan rộng của ung thư phổi, quyết định phương pháp điều trị và tiên lượng. Giai đoạn I-II: Khối u còn khu trú tại phổi, chưa hoặc chỉ di căn hạch rốn phổi cùng bên. Có thể phẫu thuật cắt bỏ triệt căn. Tỷ lệ sống 5 năm dao động từ 60-90% tùy kích thước khối u. Đây là giai đoạn có tiên lượng tốt nhất. Giai đoạn III: Ung thư đã lan rộng cục bộ đến hạch trung thất hoặc xâm lấn các cấu trúc lân cận (thành ngực, màng phổi, thực quản). Điều trị chủ yếu bằng hóa-xạ trị đồng thời, sau đó có thể duy trì bằng liệu pháp miễn dịch (durvalumab). Một số trường hợp IIIA có thể phẫu thuật sau hóa trị tân bổ trợ. Giai đoạn IV: Ung thư đã di căn xa đến các cơ quan khác (não, gan, xương, tuyến thượng thận, phổi đối bên). Điều trị toàn thân bằng hóa trị, liệu pháp nhắm đích (nếu có đột biến driver), hoặc liệu pháp miễn dịch. Mục tiêu chính là kéo dài sống và cải thiện chất lượng cuộc sống. Tỷ lệ sống 5 năm toàn bộ cho tất cả các giai đoạn ung thư phổi khoảng 20%, nhấn mạnh tầm quan trọng của phát hiện sớm qua sàng lọc."
+        },
+        {
+            "source": "Bộ Y tế Việt Nam",
+            "url": "https://kcb.vn/huong-dan-chan-doan-dieu-tri-ung-thu-phoi",
+            "title": "Hướng dẫn chẩn đoán và điều trị ung thư phổi của Bộ Y tế",
+            "section_title": "Hội chứng chèn ép tĩnh mạch chủ trên (SVCS)",
+            "content": "Hội chứng chèn ép tĩnh mạch chủ trên (Superior Vena Cava Syndrome - SVCS) là một cấp cứu lâm sàng khẩn cấp ở bệnh nhân ung thư phổi, xảy ra khi tĩnh mạch chủ trên bị chèn ép cơ học do khối u hoặc hạch trung thất phì đại. Triệu chứng đặc trưng bao gồm: phù nề mặt, cổ và chi trên (phù áo khoác), ho khan, khàn tiếng rõ rệt, khó thở tiến triển, nổi rõ tuần hoàn bàng hệ (tĩnh mạch căng phồng) ở vùng ngực và cổ. Bệnh nhân có dấu hiệu phù mặt cổ kèm ho khàn tiếng cần được đưa đi cấp cứu ngay lập tức để giải áp chèn ép tại các cơ sở chuyên khoa Ung bướu/Hô hấp, tuyệt đối không tự điều trị hoặc nhầm lẫn là tác dụng phụ thông thường của hóa trị."
         }
     ]
 
