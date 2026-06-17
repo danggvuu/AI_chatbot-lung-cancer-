@@ -110,7 +110,7 @@ scrape_url <- function(url, source_name) {
       return(list())
     }
     
-    soup <- read_html(res)
+    soup <- read_html(content(res, as = "text", encoding = "UTF-8"))
     
     # Tiêu đề bài viết
     title <- ""
@@ -286,11 +286,29 @@ main <- function() {
   }
   
   output_path <- "data/knowledge_base.json"
+  csv_path <- "data/knowledge_base.csv"
   
   # Ghi file JSON dạng pretty
   write_json(all_chunks, path = output_path, pretty = TRUE, auto_unbox = TRUE)
   
-  cat("\n🫁 LungCare AI - Đã lưu thành công", length(all_chunks), "phân đoạn y khoa vào", output_path, "\n")
+  # Chuyển đổi list of lists thành data frame để xuất CSV
+  df <- data.frame(
+    id = sapply(all_chunks, function(x) x$id),
+    source = sapply(all_chunks, function(x) x$source),
+    url = sapply(all_chunks, function(x) x$url),
+    title = sapply(all_chunks, function(x) x$title),
+    section_title = sapply(all_chunks, function(x) x$section_title),
+    content = sapply(all_chunks, function(x) x$content),
+    stringsAsFactors = FALSE
+  )
+  
+  # Ghi file CSV có mã hóa BOM UTF-8 để mở đẹp trên Excel Windows
+  con <- file(csv_path, open = "w", encoding = "UTF-8")
+  writeLines('\ufeff', con, sep='')
+  write.csv(df, file = con, row.names = FALSE)
+  close(con)
+  
+  cat("\n🫁 LungCare AI - Đã lưu thành công", length(all_chunks), "phân đoạn y khoa vào", output_path, "và", csv_path, "\n")
 }
 
 # Chạy chương trình chính

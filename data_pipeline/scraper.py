@@ -242,6 +242,7 @@ def main():
     # Ensure data directory exists
     os.makedirs("data", exist_ok=True)
     output_path = os.path.join("data", "knowledge_base.json")
+    csv_path = os.path.join("data", "knowledge_base.csv")
 
     # Add unique IDs
     for idx, chunk in enumerate(all_chunks):
@@ -250,7 +251,14 @@ def main():
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(all_chunks, f, ensure_ascii=False, indent=2)
 
-    print(f"\n🫁 LungCare AI - Saved {len(all_chunks)} chunks to {output_path}")
+    # Save as CSV with UTF-8 BOM for Excel compatibility
+    import csv
+    with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.DictWriter(f, fieldnames=["id", "source", "url", "title", "section_title", "content"])
+        writer.writeheader()
+        writer.writerows(all_chunks)
+
+    print(f"\n🫁 LungCare AI - Saved {len(all_chunks)} chunks to {output_path} and {csv_path}")
 
 
 if __name__ == "__main__":
