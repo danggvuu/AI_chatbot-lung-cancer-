@@ -25,7 +25,7 @@ def detect_chatbot_url():
 
 CHATBOT_API_URL = detect_chatbot_url()
 OLLAMA_API_URL = os.environ.get("OLLAMA_API_URL", "http://localhost:11434/api/chat")
-OLLAMA_MODEL = "llama3.2"
+OLLAMA_MODEL = "qwen2.5:3b"
 
 # 50 lung cancer clinical consultation cases for comprehensive Evaluation
 QUESTIONS = [

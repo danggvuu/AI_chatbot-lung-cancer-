@@ -68,7 +68,7 @@ echo   ✅  Knowledge Base: %CHUNK_COUNT% phân đoạn y khoa
 
 :: --- 5. Kiểm tra Ollama ---
 echo.
-set OLLAMA_MODEL=llama3.2
+set OLLAMA_MODEL=qwen2.5:3b
 where ollama >nul 2>nul
 if %errorlevel% equ 0 (
     echo   ✅  Ollama đã cài đặt
@@ -114,8 +114,8 @@ echo   ║  ⏹   Đóng cửa sổ này để tắt server      ║
 echo   ╚══════════════════════════════════════════╝
 echo.
 
-:: Mở trình duyệt sau 2 giây ở luồng riêng
-start "" http://localhost:5080
+:: Khởi chạy trình duyệt tự động khi backend đã sẵn sàng (chạy ngầm thông qua PowerShell)
+start /Min "" powershell -Command "while ($true) { try { $c = New-Object System.Net.Sockets.TcpClient; $c.Connect('127.0.0.1', 5080); $c.Close(); break } catch { Start-Sleep -Seconds 1 } } ; Start-Process 'http://localhost:5080'"
 
 :: Chạy FastAPI server
 %PYTHON_CMD% main.py
