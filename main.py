@@ -2,6 +2,8 @@ import os
 import json
 import argparse
 import requests
+import time
+from threading import Lock
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -12,6 +14,36 @@ from dotenv import load_dotenv
 from retrieval import LungCancerRetriever
 
 load_dotenv()
+
+class SimpleTTLCache:
+    def __init__(self, maxsize=1024, ttl=3600):
+        self.maxsize = maxsize
+        self.ttl = ttl
+        self.cache = {}
+        self.lock = Lock()
+
+    def get(self, key):
+        with self.lock:
+            if key not in self.cache:
+                return None
+            val, expire_time = self.cache[key]
+            if time.time() > expire_time:
+                del self.cache[key]
+                return None
+            return val
+
+    def set(self, key, value):
+        with self.lock:
+            now = time.time()
+            expired = [k for k, (_, exp) in self.cache.items() if now > exp]
+            for k in expired:
+                del self.cache[k]
+            if len(self.cache) >= self.maxsize:
+                oldest_key = min(self.cache.keys(), key=lambda k: self.cache[k][1])
+                del self.cache[oldest_key]
+            self.cache[key] = (value, now + self.ttl)
+
+chat_cache = SimpleTTLCache(maxsize=1024, ttl=3600)
 
 app = FastAPI(title="LungCare AI API", version="1.0.0")
 
@@ -37,7 +69,7 @@ if HAS_FRONTEND_BUILD:
 
 # Configuration from environment variables
 OLLAMA_API_URL = os.environ.get("OLLAMA_API_URL", "http://localhost:11434").rstrip('/')
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:3b")
 KB_PATH = os.environ.get("KB_PATH", "data/knowledge_base.json")
 
 # Initialize retriever
@@ -122,6 +154,28 @@ async def chat(request: Request):
     if not messages:
         return JSONResponse(content={"error": "No messages provided"}, status_code=400)
         
+    # Tạo khóa cache dựa trên toàn bộ lịch sử hội thoại
+    cache_key = json.dumps(messages, sort_keys=True)
+    cached_val = chat_cache.get(cache_key)
+    
+    if cached_val:
+        print("💾 [Cache Hit] Trúng cache RAM! Phản hồi ngay lập tức.")
+        sources_metadata, assistant_message = cached_val
+        if stream_requested:
+            def cached_event_stream():
+                yield f"data: {json.dumps({'sources': sources_metadata})}\n\n"
+                yield f"data: {json.dumps({'delta': assistant_message})}\n\n"
+            headers = {
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"
+            }
+            return StreamingResponse(cached_event_stream(), media_type="text/event-stream", headers=headers)
+        else:
+            return {"message": assistant_message, "sources": sources_metadata}
+        
+    print("❌ [Cache Miss] Không tìm thấy cache RAM. Bắt đầu xử lý...")
+        
     last_user_msg = ""
     for msg in reversed(messages):
         if msg.get("role") == "user":
@@ -182,6 +236,7 @@ async def chat(request: Request):
     if stream_requested:
         def event_stream():
             yield f"data: {json.dumps({'sources': sources_metadata})}\n\n"
+            collected_chunks = []
             try:
                 with requests.post(f"{OLLAMA_API_URL}/api/chat", json=payload, stream=True, timeout=180) as r:
                     if r.status_code != 200:
@@ -194,6 +249,7 @@ async def chat(request: Request):
                                 json_line = json.loads(decoded_line)
                                 content = json_line.get("message", {}).get("content", "")
                                 if content:
+                                    collected_chunks.append(content)
                                     yield f"data: {json.dumps({'delta': content})}\n\n"
                                 if json_line.get("done", False):
                                     break
@@ -201,6 +257,11 @@ async def chat(request: Request):
                                 pass
             except Exception as e:
                 yield f"data: {json.dumps({'error': 'Connection error', 'detail': str(e)})}\n\n"
+            finally:
+                full_message = "".join(collected_chunks)
+                if full_message:
+                    print(f"💾 [Cache Store] Đã lưu vào RAM Cache (stream). Kích thước: {len(full_message)} ký tự.")
+                    chat_cache.set(cache_key, (sources_metadata, full_message))
         headers = {
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
@@ -219,6 +280,10 @@ async def chat(request: Request):
         ollama_res = response.json()
         assistant_message = ollama_res.get("message", {}).get("content", "")
         
+        if assistant_message:
+            print(f"💾 [Cache Store] Đã lưu vào RAM Cache (non-stream). Kích thước: {len(assistant_message)} ký tự.")
+            chat_cache.set(cache_key, (sources_metadata, assistant_message))
+            
         return {"message": assistant_message, "sources": sources_metadata}
         
     except requests.exceptions.RequestException as e:
@@ -290,4 +355,4 @@ if __name__ == "__main__":
     else:
         import uvicorn
         port = int(os.environ.get("PORT", 5080))
-        uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+        uvicorn.run(app, host="0.0.0.0", port=port)

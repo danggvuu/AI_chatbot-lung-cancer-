@@ -66,7 +66,7 @@ echo "  ✅  Knowledge Base: $CHUNK_COUNT phân đoạn y khoa"
 
 # --- 5. Kiểm tra Ollama ---
 echo ""
-OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.2}"
+OLLAMA_MODEL="${OLLAMA_MODEL:-qwen2.5:3b}"
 if command -v ollama &> /dev/null; then
     echo "  ✅  Ollama đã cài đặt"
     if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
@@ -106,8 +106,13 @@ echo "  ║  ⏹   Nhấn Ctrl+C để tắt server          ║"
 echo "  ╚══════════════════════════════════════════╝"
 echo ""
 
-# Mở trình duyệt sau 2 giây
-(sleep 2 && open "http://localhost:5080") &
+# Khởi chạy trình duyệt tự động khi backend đã sẵn sàng (chạy ngầm)
+(
+    while ! nc -z 127.0.0.1 5080; do
+        sleep 1
+    done
+    open "http://localhost:5080"
+) &
 
 # Chạy FastAPI server
 $PYTHON_CMD main.py
