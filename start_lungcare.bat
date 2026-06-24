@@ -43,7 +43,7 @@ echo   ✅  Dependencies đã sẵn sàng
 :: --- 3.5. Kiểm tra & Build Frontend React ---
 if exist "frontend" if not exist "frontend\dist" (
     echo.
-    echo   ⏳  Đang cài đặt và build React frontend (lần đầu)...
+    echo   ⏳  Đang cài đặt và build React frontend [lần đầu]...
     cd frontend
     if not exist "node_modules" (
         call npm install
@@ -91,7 +91,7 @@ if %errorlevel% equ 0 (
         timeout /t 3 >nul
         ollama list 2>nul | findstr /i "%OLLAMA_MODEL%" >nul
         if %errorlevel% neq 0 (
-            echo   ⏳  Đang tải model %OLLAMA_MODEL% (lần đầu có thể mất vài phút)...
+            echo   ⏳  Đang tải model %OLLAMA_MODEL% [lần đầu có thể mất vài phút]...
             ollama pull %OLLAMA_MODEL%
         )
         echo   ✅  Ollama đã khởi động

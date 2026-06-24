@@ -32,6 +32,8 @@ EMBEDDING_MODEL = os.environ.get(
 )
 QDRANT_DB_PATH = os.environ.get("QDRANT_DB_PATH", "data/qdrant_db")
 RRF_K = 60  # Hệ số RRF tiêu chuẩn
+MIN_BM25_SCORE = 1.0     # Điểm số từ khóa BM25 tối thiểu
+MIN_VECTOR_SCORE = 0.50   # Độ tương đồng ngữ nghĩa vector tối thiểu (Cosine)
 
 VIETNAMESE_STOPWORDS = {
     'và', 'hoặc', 'nhưng', 'vì', 'nên', 'thì', 'ở', 'tại', 'có', 'không', 
@@ -45,7 +47,9 @@ VIETNAMESE_STOPWORDS = {
     'ta', 'tự', 'thường', 'hay', 'rất', 'quá', 'lắm', 'hết', 'cơ', 
     'bản', 'mỗi', 'một', 'cả', 'nhất', 'nhỏ', 'lớn', 'nhiều', 'ít', 
     'vừa', 'mới', 'còn', 'đều', 'chỉ', 'cũng', 'vẫn', 'thế', 'nào',
-    'đó', 'đây', 'kia', 'nào', 'vậy'
+    'đó', 'đây', 'kia', 'nào', 'vậy',
+    'anh', 'chị', 'em', 'ông', 'bà', 'bố', 'mẹ', 'học', 'tốt', 'tiếng', 
+    'làm_sao', 'cho_tôi', 'muốn', 'hỏi', 'bác_sĩ', 'xin_hỏi', 'cách', 'làm_thế_nào'
 }
 
 
@@ -194,6 +198,8 @@ class LungCancerRetriever:
             return []
 
         unique_query_tokens = list(set(query_tokens))
+        min_match = max(1, math.ceil(len(unique_query_tokens) * 0.5))
+        
         scores = []
         for i, doc in enumerate(self.doc_tokens):
             score = 0.0
@@ -203,12 +209,14 @@ class LungCancerRetriever:
 
             doc_counter = Counter(doc)
             title_tokens = tokenize(self.documents[i]['section_title'])
+            matched_tokens_count = 0
 
             for token in unique_query_tokens:
                 token_in_body = doc_counter[token] > 0
                 token_in_title = token in title_tokens
 
                 if token_in_body or token_in_title:
+                    matched_tokens_count += 1
                     if token in self.vocab:
                         df = self.doc_freqs[token]
                         idf = math.log((self.N + 1) / (df + 0.5)) + 1
@@ -219,7 +227,7 @@ class LungCancerRetriever:
 
                         score += body_score + title_score
 
-            if score > 0:
+            if matched_tokens_count >= min_match and score >= MIN_BM25_SCORE:
                 scores.append((self.documents[i]["id"], score))
 
         scores.sort(key=lambda x: x[1], reverse=True)
@@ -305,7 +313,11 @@ class LungCancerRetriever:
             query=query_vec,
             limit=top_k,
         )
-        return [(hit.payload["doc_id"], hit.score) for hit in results.points]
+        return [
+            (hit.payload["doc_id"], hit.score) 
+            for hit in results.points 
+            if hit.score >= MIN_VECTOR_SCORE
+        ]
 
     # ── Unified Search ─────────────────────────────────────────────────────
     def search(self, query: str, top_k: int = 4) -> list:

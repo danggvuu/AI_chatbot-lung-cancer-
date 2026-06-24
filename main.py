@@ -2,6 +2,7 @@ import os
 import json
 import argparse
 import requests
+import re
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -108,6 +109,50 @@ async def retrieve_only(request: Request):
     retrieved_docs = retriever.search(query, top_k=top_k)
     return {"question": query, "chunks": retrieved_docs}
 
+def classify_intent(query: str) -> dict | None:
+    """
+    Phân loại nhanh câu hỏi ngoài chủ đề (Rule-based).
+    Trả về dict chứa nội dung phản hồi nếu khớp mẫu, ngược lại trả về None.
+    """
+    if not query:
+        return None
+        
+    # Chuẩn hóa chuỗi
+    q_clean = query.strip().lower()
+    q_clean = re.sub(r'[^\w\s]', '', q_clean).strip()
+    
+    # Định nghĩa các tập từ khóa
+    greetings = {
+        "chào", "hello", "hi", "xin chào", "chào bạn", "alo", "helo", "hey", "hế lô", "chào bác sĩ"
+    }
+    thanks_farewell = {
+        "cảm ơn", "cám ơn", "thank you", "thanks", "tạm biệt", "bye", "hên gặp lại", "hẹn gặp lại", "tạm biệt bác sĩ", "cảm ơn bác sĩ"
+    }
+    identity = {
+        "bạn là ai", "tên gì", "ai đây", "giới thiệu về bạn", "giới thiệu", "bạn là gì", "mày là ai"
+    }
+    
+    words_count = len(q_clean.split())
+    
+    if words_count <= 4:
+        if q_clean in greetings or any(w == q_clean for w in greetings):
+            return {
+                "message": "Chào bạn! Tôi là LungCare AI, trợ lý ảo chuyên tư vấn thông tin về bệnh lý Ung thư phổi. Bạn cần tôi hỗ trợ giải đáp thông tin gì hôm nay?",
+                "sources": []
+            }
+        if q_clean in thanks_farewell or any(w in q_clean for w in ["cảm ơn", "cám ơn", "tạm biệt"]):
+            return {
+                "message": "Dạ không có gì ạ! Nếu bạn cần thêm bất kỳ thông tin nào về Ung thư phổi, hãy cứ hỏi tôi nhé. Chúc bạn và gia đình luôn dồi dào sức khỏe!",
+                "sources": []
+            }
+        if q_clean in identity or any(w in q_clean for w in ["bạn là ai", "giới thiệu"]):
+            return {
+                "message": "Tôi là LungCare AI, trợ lý ảo y sinh chuyên biệt về Ung thư phổi. Tôi có nhiệm vụ hỗ trợ người bệnh tra cứu kiến thức chẩn đoán, điều trị, và an toàn lâm sàng dựa trên các tài liệu chính thống.",
+                "sources": []
+            }
+            
+    return None
+
 @app.post("/api/chat")
 async def chat(request: Request):
     data = await request.json()
@@ -122,9 +167,46 @@ async def chat(request: Request):
         if msg.get("role") == "user":
             last_user_msg = msg.get("content", "")
             break
+
+    # Phân loại nhanh câu hỏi ngoài chủ đề (Rule-based)
+    matched_intent = classify_intent(last_user_msg)
+    if matched_intent:
+        if stream_requested:
+            def static_event_stream():
+                yield f"data: {json.dumps({'sources': []})}\n\n"
+                yield f"data: {json.dumps({'delta': matched_intent['message']})}\n\n"
+            headers = {
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"
+            }
+            return StreamingResponse(static_event_stream(), media_type="text/event-stream", headers=headers)
+        else:
+            return {"message": matched_intent["message"], "sources": []}
             
     retrieved_docs = retriever.search(last_user_msg, top_k=3)
     
+    # Nếu điểm số quá thấp làm kết quả RAG trống (Lạc đề hoặc ngoài phạm vi kiến thức)
+    if not retrieved_docs:
+        out_of_topic_msg = (
+            "Rất tiếc, câu hỏi của bạn nằm ngoài phạm vi tài liệu y khoa về Ung thư phổi của tôi. "
+            "Hiện tại tôi chỉ có dữ liệu chính thống để hỗ trợ giải đáp về triệu chứng, chẩn đoán, sàng lọc, "
+            "phương pháp điều trị (nhắm đích, hóa/xạ trị) và biến chứng của bệnh lý ung thư phổi. "
+            "Vui lòng đặt câu hỏi liên quan để tôi có thể hỗ trợ tốt nhất."
+        )
+        if stream_requested:
+            def empty_event_stream():
+                yield f"data: {json.dumps({'sources': []})}\n\n"
+                yield f"data: {json.dumps({'delta': out_of_topic_msg})}\n\n"
+            headers = {
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"
+            }
+            return StreamingResponse(empty_event_stream(), media_type="text/event-stream", headers=headers)
+        else:
+            return {"message": out_of_topic_msg, "sources": []}
+            
     context_str = ""
     sources_metadata = []
     
@@ -289,4 +371,4 @@ if __name__ == "__main__":
     else:
         import uvicorn
         port = int(os.environ.get("PORT", 5080))
-        uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+        uvicorn.run(app, host="0.0.0.0", port=port)
