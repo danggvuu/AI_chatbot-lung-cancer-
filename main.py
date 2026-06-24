@@ -38,7 +38,7 @@ if HAS_FRONTEND_BUILD:
 
 # Configuration from environment variables
 OLLAMA_API_URL = os.environ.get("OLLAMA_API_URL", "http://localhost:11434").rstrip('/')
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:3b")
 KB_PATH = os.environ.get("KB_PATH", "data/knowledge_base.json")
 
 # Initialize retriever
