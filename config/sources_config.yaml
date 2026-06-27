@@ -1,0 +1,64 @@
+sources:
+  - name: "Bệnh viện K"
+    priority: "hospital"
+    urls:
+      - "https://benhvienk.vn/ung-thu-phoi-can-benh-khong-the-chu-quan-dung-bo-qua-cac-thong-tin-duoi-day-nd94263.html"
+      - "https://benhvienk.vn/ung-thu-phoi-tam-soat-ngay-som-chua-lanh-nd92737.html"
+
+  - name: "Bệnh viện Tâm Anh"
+    priority: "hospital"
+    urls:
+      - "https://tamanhhospital.vn/benh/ung-thu-phoi/"
+      - "https://tamanhhospital.vn/benh/u-phoi/"
+      - "https://tamanhhospital.vn/ung-thu-phoi-khong-phai-te-bao-nho/"
+      - "https://tamanhhospital.vn/tin-tuc/ung-thu-phoi-xam-lan-khong-trieu-chung/"
+      - "https://tamanhhospital.vn/tin-tuc/hoa-tri-ket-hop-thuoc-dich-chua-ung-thu-phoi-egfr/"
+      - "https://tamanhhospital.vn/tin-tuc/khong-hut-thuoc-nhieu-nguoi-van-mac-ung-thu-phoi/"
+      - "https://tamanhhospital.vn/tin-tuc/ung-thu-phoi-du-khong-hut-thuoc/"
+      - "https://tamanhhospital.vn/tin-tuc/hai-me-con-cung-ung-thu-phoi/"
+      - "https://tamanhhospital.vn/tin-tuc/phau-thuat-ket-hop-dung-thuoc-ten-lua-dan-duong-dieu-tri-ung-thu-phoi/"
+      - "https://tamanhhospital.vn/hoi-thao/ky-nguyen-moi-trong-ca-the-hoa-dieu-tri-ung-thu-phoi/"
+
+  - name: "Vinmec"
+    priority: "hospital"
+    urls:
+      - "https://www.vinmec.com/vie/benh/ung-thu-phoi-3039"
+      - "https://www.vinmec.com/vie/bai-viet/ung-thu-phoi-vi"
+      - "https://www.vinmec.com/vie/benh/ung-thu-phe-quan-phoi-nguyen-phat-3287"
+      - "https://www.vinmec.com/vi/tin-tuc/thong-tin-suc-khoe/cac-buoc-chan-doan-ung-thu-phoi/"
+      - "https://www.vinmec.com/vie/bai-viet/co-nhung-loai-ung-thu-phoi-nao-vi"
+      - "https://www.vinmec.com/vie/bai-viet/mo-noi-soi-long-nguc-cat-thuy-phoi-va-nao-hach-o-nguoi-ung-thu-phoi-vi/"
+      - "https://www.vinmec.com/vie/bai-viet/chup-cat-lop-cho-doi-tuong-nghi-co-khoi-u-trong-phoi-vi"
+      - "https://www.vinmec.com/vie/bai-viet/cac-loai-xet-nghiem-te-bao-hoc-de-tim-kiem-te-bao-ung-thu-vi"
+
+  - name: "Bệnh viện Trung ương Quân đội 108"
+    priority: "hospital"
+    urls:
+      - "https://benhvien108.vn/phau-thuat-noi-soi-cat-thuy-phoi-va-vet-hach-dieu-tri-ung-thu-phoi-khong-te-bao-nho.htm"
+      - "https://benhvien108.vn/ung-thu-phoi-khong-te-bao-nho-giai-doan-som-khong-phau-thuat-duoc-dau-la-lua-chon-thay-the-.htm"
+      - "https://benhvien108.vn/danh-gia-hieu-qua-phau-thuat-noi-soi-cat-thuy-phoi-va-vet-hach-dieu-tri-ung-thu-phoi-khong-te-bao-nho.htm"
+      - "https://benhvien108.vn/nghien-cuu-tinh-trang-di-can-hach-va-ket-qua-phau-thuat-noi-soi-cat-thuy-phoi-nao-vet-hach-trong-dieu-tri-ung-thu-phoi-khong-te-bao-nho.htm"
+      - "https://benhvien108.vn/u-phe-bao-xo-hoa-su-nham-lan-ung-thu-tuyen-phoi.htm"
+
+  - name: "MEDLATEC"
+    priority: "hospital"
+    urls:
+      - "https://medlatec.vn/tin-tuc/gia-tri-cua-cac-dau-an-sinh-hoc-trong-chan-doan-theo-doi-va-tien-luong-ung-thu-phoi-s151-n21703"
+
+  - name: "Bệnh viện Đa khoa Phương Đông"
+    priority: "hospital"
+    urls:
+      - "https://benhvienphuongdong.vn/ung-thu-phoi/"
+
+  - name: "Bệnh viện Hồng Ngọc"
+    priority: "hospital"
+    urls:
+      - "https://hongngochospital.vn/ung-thu-phoi/"
+
+  - name: "Bệnh viện Thu Cúc"
+    priority: "hospital"
+    urls: []
+
+  - name: "Bệnh viện FV"
+    priority: "hospital"
+    urls: []

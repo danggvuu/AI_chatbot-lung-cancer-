@@ -37,8 +37,8 @@ flowchart TD
     classDef gray fill:#374151,stroke:#4b5563,stroke-width:1px,color:#fff;
 
     subgraph DataPrep ["1. DATA PIPELINE"]
-        A["scraper.py<br/>Medical Web Scraper"]:::cyan
-        C["knowledge_base.json<br/>Consolidated Medical KB<br/>(142 Chunks)"]:::gray
+        A["scraper.py<br/>Medical Web Scraper<br/>(Anti-bot Bypass)"]:::cyan
+        C["knowledge_base.json<br/>Consolidated Medical KB<br/>(75 Chunks)"]:::gray
     end
 
     subgraph Retrieval ["2. HYBRID RETRIEVAL (QDRANT + BM25)"]
@@ -109,13 +109,32 @@ Hệ thống RAG được chấm điểm nghiêm ngặt qua 7 chiều chất lư
 
 ---
 
-## 🏥 Nguồn Dữ liệu Y khoa (142 Chunks)
+## 🏥 Nguồn Dữ liệu Y khoa (75 Chunks)
 
 Dữ liệu được thu thập từ các nguồn y bướu học và hô hấp chính thống tại Việt Nam:
 1.  **Bộ Y tế Việt Nam**: Quyết định chẩn đoán và điều trị chuẩn quốc gia.
 2.  **Bệnh viện K**: Viện Ung bướu Quốc gia đầu ngành.
 3.  **Bệnh viện Trung ương Quân đội 108**: Phác đồ điều trị và chẩn đoán.
 4.  **Hệ thống y tế lớn**: Vinmec, Bệnh viện Tâm Anh, Medlatec, Bệnh viện Hồng Ngọc, Nhà thuốc Long Châu.
+
+---
+
+## 🕷️ Hướng dẫn Cào Dữ liệu (Web Scraping & Anti-bot Bypass)
+
+Hệ thống được tích hợp sẵn công cụ tự động thu thập và tiền xử lý kiến thức từ các bệnh viện lớn. Công cụ này được trang bị cơ chế **Vượt Tường Lửa (Anti-bot Bypass)**:
+- Tự động xoay vòng User-Agent giả lập trình duyệt thật.
+- Bơm các HTTP headers chuẩn (Accept, Upgrade-Insecure-Requests).
+- Bỏ qua kiểm tra chứng chỉ SSL/TLS cứng ngắc (cho phép cào các trang bị lỗi SSL như Bệnh viện K).
+- Bộ lọc `Deduplicator` so khớp độ tương đồng 85% để tự động ném rác và các bài viết bị copy trùng lặp.
+
+**Cách tự cào dữ liệu mới:**
+1. Mở file `config/sources_config.yaml` và thêm các đường link bài viết y khoa bạn mới tìm được vào dưới từng bệnh viện tương ứng.
+2. Mở Terminal và chạy lệnh:
+   ```bash
+   python data_pipeline/run_scraper.py
+   ```
+3. Xem log trả về báo số lượng chunk thành công.
+4. Tắt Server Chatbot hiện tại (nếu đang bật) và chạy lại lệnh `python main.py`. Ngay lúc khởi động, hệ thống sẽ tự động Embedding toàn bộ đống dữ liệu mới này vào Qdrant để Chatbot có thể sử dụng ngay lập tức!
 
 ---
 
@@ -151,6 +170,14 @@ ollama run qwen2.5:3b
 # 6. Khởi chạy máy chủ Chatbot
 python main.py
 ```
+
+> **⚠️ LƯU Ý QUAN TRỌNG VỀ QDRANT (Cơ sở dữ liệu Vector):**
+> 
+> Hệ thống hiện tại sử dụng Qdrant Local Mode (lưu vào file SQLite trong `data/qdrant_db`). Chế độ này **không cho phép** nhiều tiến trình (process) truy cập đồng thời.
+> - Khi chạy server, luôn đảm bảo chỉ có 1 worker duy nhất (không dùng `uvicorn --reload` hay `workers=N`).
+> - Tuyệt đối **không chạy** các script đánh giá (như `evaluate_lung_chatbot.py` hoặc `run_pipeline.py`) trong lúc server (`main.py`) đang hoạt động.
+> - Nếu gặp lỗi "already accessed by another instance", hãy tắt tất cả process đang chạy ngầm và xóa file `data/qdrant_db/.lock`.
+> - *Nếu bạn cần phục vụ nhiều user hoặc chạy test song song với server, hãy cài đặt [Qdrant Server bằng Docker](https://qdrant.tech/documentation/quick-start/) và cập nhật connection string.*
 
 Truy cập giao diện Chatbot tại: [http://localhost:5080](http://localhost:5080)
 
